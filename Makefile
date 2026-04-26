@@ -12,8 +12,7 @@ test:
 lint:
 	ruff check app tests
 
-verify: lint test validate
+verify: lint test build validate
 
 clean:
 	rm -rf warehouse
-

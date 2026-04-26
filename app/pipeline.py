@@ -22,8 +22,19 @@ def _ensure_directories() -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
+def expected_artifacts() -> BuildArtifacts:
+    return BuildArtifacts(
+        bronze_orders=BRONZE_DIR / "bronze_orders.parquet",
+        silver_orders=SILVER_DIR / "silver_orders.parquet",
+        silver_latest_order_state=SILVER_DIR / "silver_latest_order_state.parquet",
+        gold_daily_region_sales=GOLD_DIR / "gold_daily_region_sales.parquet",
+        gold_customer_order_metrics=GOLD_DIR / "gold_customer_order_metrics.parquet",
+    )
+
+
 def build_all() -> BuildArtifacts:
     _ensure_directories()
+    artifacts = expected_artifacts()
     connection = duckdb.connect(database=":memory:")
     try:
         raw_glob = str(RAW_DIR / "*.csv")
@@ -38,15 +49,17 @@ def build_all() -> BuildArtifacts:
                 customer_id,
                 region,
                 status,
-                cast(order_amount as double) as order_amount,
+                cast(order_amount as decimal(12, 2)) as order_amount,
                 cast(event_ts as timestamp) as event_ts,
                 cast(ingestion_ts as timestamp) as ingestion_ts
             from read_csv_auto(?, filename=true)
             """,
             [raw_glob],
         )
-        bronze_orders = BRONZE_DIR / "bronze_orders.parquet"
-        connection.execute("copy raw_orders to ? (format parquet)", [str(bronze_orders)])
+        connection.execute(
+            "copy raw_orders to ? (format parquet)",
+            [str(artifacts.bronze_orders)],
+        )
 
         connection.execute(
             """
@@ -81,8 +94,10 @@ def build_all() -> BuildArtifacts:
             where dedupe_rank = 1
             """
         )
-        silver_orders = SILVER_DIR / "silver_orders.parquet"
-        connection.execute("copy silver_orders to ? (format parquet)", [str(silver_orders)])
+        connection.execute(
+            "copy silver_orders to ? (format parquet)",
+            [str(artifacts.silver_orders)],
+        )
 
         connection.execute(
             """
@@ -110,10 +125,9 @@ def build_all() -> BuildArtifacts:
             where latest_rank = 1
             """
         )
-        silver_latest_order_state = SILVER_DIR / "silver_latest_order_state.parquet"
         connection.execute(
             "copy silver_latest_order_state to ? (format parquet)",
-            [str(silver_latest_order_state)],
+            [str(artifacts.silver_latest_order_state)],
         )
 
         connection.execute(
@@ -123,17 +137,16 @@ def build_all() -> BuildArtifacts:
                 event_date,
                 region,
                 count(*) as delivered_orders,
-                round(sum(order_amount), 2) as delivered_revenue
+                cast(sum(order_amount) as decimal(12, 2)) as delivered_revenue
             from silver_latest_order_state
             where status = 'delivered'
             group by 1, 2
             order by 1, 2
             """
         )
-        gold_daily_region_sales = GOLD_DIR / "gold_daily_region_sales.parquet"
         connection.execute(
             "copy gold_daily_region_sales to ? (format parquet)",
-            [str(gold_daily_region_sales)],
+            [str(artifacts.gold_daily_region_sales)],
         )
 
         connection.execute(
@@ -142,36 +155,44 @@ def build_all() -> BuildArtifacts:
             select
                 customer_id,
                 count(*) as active_orders,
-                sum(case when status = 'delivered' then 1 else 0 end) as delivered_orders,
-                round(sum(case when status = 'delivered' then order_amount else 0 end), 2) as delivered_revenue,
+                cast(sum(case when status = 'delivered' then 1 else 0 end) as bigint) as delivered_orders,
+                cast(
+                    sum(
+                        case
+                            when status = 'delivered' then order_amount
+                            else cast(0 as decimal(12, 2))
+                        end
+                    ) as decimal(12, 2)
+                ) as delivered_revenue,
                 max(event_ts) as latest_order_event_ts
             from silver_latest_order_state
             group by 1
             order by 1
             """
         )
-        gold_customer_order_metrics = GOLD_DIR / "gold_customer_order_metrics.parquet"
         connection.execute(
             "copy gold_customer_order_metrics to ? (format parquet)",
-            [str(gold_customer_order_metrics)],
+            [str(artifacts.gold_customer_order_metrics)],
         )
     finally:
         connection.close()
 
-    return BuildArtifacts(
-        bronze_orders=bronze_orders,
-        silver_orders=silver_orders,
-        silver_latest_order_state=silver_latest_order_state,
-        gold_daily_region_sales=gold_daily_region_sales,
-        gold_customer_order_metrics=gold_customer_order_metrics,
-    )
+    return artifacts
 
 
 def summarize_artifacts(artifacts: BuildArtifacts) -> dict[str, str]:
+    cwd = Path.cwd()
+
+    def _portable(path: Path) -> str:
+        try:
+            return str(path.relative_to(cwd))
+        except ValueError:
+            return str(path)
+
     return {
-        "bronze_orders": str(artifacts.bronze_orders),
-        "silver_orders": str(artifacts.silver_orders),
-        "silver_latest_order_state": str(artifacts.silver_latest_order_state),
-        "gold_daily_region_sales": str(artifacts.gold_daily_region_sales),
-        "gold_customer_order_metrics": str(artifacts.gold_customer_order_metrics),
+        "bronze_orders": _portable(artifacts.bronze_orders),
+        "silver_orders": _portable(artifacts.silver_orders),
+        "silver_latest_order_state": _portable(artifacts.silver_latest_order_state),
+        "gold_daily_region_sales": _portable(artifacts.gold_daily_region_sales),
+        "gold_customer_order_metrics": _portable(artifacts.gold_customer_order_metrics),
     }

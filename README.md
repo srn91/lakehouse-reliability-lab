@@ -6,6 +6,8 @@ A production-style local lakehouse pipeline that lands raw order events into bro
 
 Many data engineering demos stop at “the transform ran.” Real lakehouse work is harder: late-arriving events, duplicate deliveries, trustworthy medallion layers, and clear reconciliation between curated tables and the business truth. This repo focuses on that reliability story instead of just moving rows around.
 
+The sample dataset is intentionally compact so the full workflow stays fast on a laptop, but it is not a throwaway fixture. The batches are shaped to exercise duplicate event removal, late-arriving state changes, multi-region revenue rollups, and customer-level reconciliation without hiding the logic behind a large opaque dataset.
+
 ## Architecture
 
 The V1 implementation is deliberately local-first and transparent:
@@ -14,7 +16,7 @@ The V1 implementation is deliberately local-first and transparent:
 - bronze preserves raw ingestion history
 - silver deduplicates by `event_id`, standardizes types, and produces the latest known state per order
 - gold publishes consumption-ready revenue and customer metrics tables
-- validation checks row integrity, duplicate removal, and revenue reconciliation across layers
+- validation checks row integrity, duplicate removal, and reconciliation across both gold outputs
 
 ```mermaid
 flowchart LR
@@ -84,6 +86,8 @@ That command creates:
 make validate
 ```
 
+`validate` is a read-only check against already-built parquet artifacts. Run `make build` first if you have not materialized the warehouse outputs yet.
+
 ### Run the Full Quality Gate
 
 ```bash
@@ -96,14 +100,16 @@ The repo currently verifies three reliability properties:
 
 - duplicate raw deliveries collapse cleanly in silver
 - each order has one latest-state record after reconciliation
-- gold delivered revenue matches the delivered revenue from silver latest-state records
+- daily-region gold revenue matches the delivered revenue from silver latest-state records
+- customer-level gold metrics cover every latest-state customer and reconcile delivered counts and revenue
 
 Current expected validation snapshot:
 
 - bronze rows: `11`
 - silver rows after dedupe: `10`
 - latest order states: `6`
-- delivered revenue reconciliation: `604.75`
+- customer metric rows: `5`
+- delivered revenue reconciliation across both gold outputs: `604.75`
 
 Local quality gates:
 
@@ -121,6 +127,7 @@ The V1 repo demonstrates:
 - duplicate event removal in the silver layer
 - warehouse-friendly gold aggregates for daily regional sales and customer metrics
 - deterministic validation of business reconciliation between curated outputs and source truth
+- fixed-point money handling so financial rollups stay exact end to end
 
 ## Next Steps
 
