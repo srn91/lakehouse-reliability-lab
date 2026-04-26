@@ -8,6 +8,17 @@ Many data engineering demos stop at “the transform ran.” Real lakehouse work
 
 The sample dataset is intentionally compact so the full workflow stays fast on a laptop, but it is not a throwaway fixture. The batches are shaped to exercise duplicate event removal, late-arriving state changes, multi-region revenue rollups, and customer-level reconciliation without hiding the logic behind a large opaque dataset.
 
+## Production Grounding
+
+This repo is meant to answer the reliability questions that show up in a real warehouse pipeline:
+
+- what happens when a source system sends the same event twice
+- what happens when a late record arrives after a newer state already exists
+- what happens when schema drift or partial corruption slips into an upstream batch
+- how you prove bronze, silver, and gold still reconcile to the business signal
+
+The V1 story is intentionally practical: it lets you show a small medallion pipeline that catches those failures before they become a production incident.
+
 ## Architecture
 
 The V1 implementation is deliberately local-first and transparent:
@@ -93,6 +104,8 @@ make validate
 ```bash
 make verify
 ```
+
+`make verify` is the most portable one-command gate in the repo. It keeps the build, validation, lint, and tests aligned with the shipped project state.
 
 ## Validation
 
