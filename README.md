@@ -28,7 +28,7 @@ The V1 implementation is deliberately local-first and transparent:
 - a schema contract check blocks missing or incompatible upstream columns before the bronze load runs
 - silver deduplicates by `event_id`, standardizes types, and produces the latest known state per order
 - gold publishes consumption-ready revenue and customer metrics tables
-- validation checks row integrity, duplicate removal, and reconciliation across both gold outputs
+- validation checks row integrity, duplicate removal, reconciliation across both gold outputs, and freshness/SLA propagation for every layer
 
 ```mermaid
 flowchart LR
@@ -147,13 +147,14 @@ After deploy, open `/docs` and `/summary` to verify the service and inspect the 
 
 ## Validation
 
-The repo currently verifies three reliability properties:
+The repo currently verifies these reliability properties:
 
 - every raw batch satisfies the expected schema contract, while additive columns are tracked explicitly
 - duplicate raw deliveries collapse cleanly in silver
 - each order has one latest-state record after reconciliation
 - daily-region gold revenue matches the delivered revenue from silver latest-state records
 - customer-level gold metrics cover every latest-state customer and reconcile delivered counts and revenue
+- bronze, silver, and gold artifacts stay within the shipped freshness/SLA budget relative to the latest upstream watermark
 
 Current expected validation snapshot:
 
@@ -164,6 +165,12 @@ Current expected validation snapshot:
 - latest order states: `6`
 - customer metric rows: `5`
 - delivered revenue reconciliation across both gold outputs: `604.75`
+- freshness/SLA checks:
+  - `bronze_orders`: `0` minute lag against source watermark, SLA `<= 5` minutes
+  - `silver_orders`: `0` minute lag against source watermark, SLA `<= 10` minutes
+  - `silver_latest_order_state`: `0` minute lag against source watermark, SLA `<= 10` minutes
+  - `gold_customer_order_metrics`: `0` minute lag against latest event watermark, SLA `<= 15` minutes
+  - `gold_daily_region_sales`: `0` day lag against latest event date, SLA `<= 0` days
 
 Local quality gates:
 
@@ -182,6 +189,7 @@ The V1 repo demonstrates:
 - duplicate event removal in the silver layer
 - warehouse-friendly gold aggregates for daily regional sales and customer metrics
 - deterministic validation of business reconciliation between curated outputs and source truth
+- per-layer freshness/SLA monitoring surfaced through CLI validation output and the hosted `/summary` API
 - fixed-point money handling so financial rollups stay exact end to end
 
 ## Future Expansion
@@ -191,5 +199,4 @@ Possible follow-on work outside the current shipped scope:
 1. add schema drift incident reporting and compatibility diffs for upstream owners
 2. partition outputs by event date for larger backfill scenarios
 3. migrate transform steps into dbt or Spark for a larger-scale execution story
-4. add freshness and SLA monitoring for each layer
-5. extend the sample domain to returns, refunds, and slowly changing customer attributes
+4. extend the sample domain to returns, refunds, and slowly changing customer attributes

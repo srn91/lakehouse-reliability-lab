@@ -8,3 +8,12 @@ BRONZE_DIR = WAREHOUSE_DIR / "bronze"
 SILVER_DIR = WAREHOUSE_DIR / "silver"
 GOLD_DIR = WAREHOUSE_DIR / "gold"
 
+PIPELINE_FRESHNESS_SLA_MINUTES = {
+    "bronze_orders": 5,
+    "silver_orders": 10,
+    "silver_latest_order_state": 10,
+    "gold_customer_order_metrics": 15,
+}
+PIPELINE_FRESHNESS_SLA_DAYS = {
+    "gold_daily_region_sales": 0,
+}

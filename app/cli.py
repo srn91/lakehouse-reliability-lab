@@ -19,28 +19,7 @@ def main() -> None:
 
     artifacts = expected_artifacts()
     validation = validate_artifacts(artifacts)
-    print(
-        json.dumps(
-            {
-                "validation": {
-                    "schema_files_checked": validation.schema_files_checked,
-                    "schema_additive_columns": validation.schema_additive_columns,
-                    "bronze_rows": validation.bronze_rows,
-                    "silver_rows": validation.silver_rows,
-                    "duplicate_event_ids": validation.duplicate_event_ids,
-                    "latest_state_rows": validation.latest_state_rows,
-                    "gold_customer_metric_rows": validation.gold_customer_metric_rows,
-                    "delivered_revenue_from_silver": validation.delivered_revenue_from_silver,
-                    "delivered_revenue_from_gold_daily": validation.delivered_revenue_from_gold_daily,
-                    "delivered_revenue_from_gold_customer": validation.delivered_revenue_from_gold_customer,
-                    "delivered_orders_from_latest_state": validation.delivered_orders_from_latest_state,
-                    "delivered_orders_from_gold_customer": validation.delivered_orders_from_gold_customer,
-                }
-            },
-            indent=2,
-            default=str,
-        )
-    )
+    print(json.dumps({"validation": validation.to_dict()}, indent=2, default=str))
 
 
 if __name__ == "__main__":

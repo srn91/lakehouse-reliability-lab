@@ -28,6 +28,16 @@ def test_validation_summary_reconciles_gold_and_silver() -> None:
     assert summary.delivered_revenue_from_gold_customer == Decimal("604.75")
     assert summary.delivered_orders_from_latest_state == 5
     assert summary.delivered_orders_from_gold_customer == 5
+    assert [check.layer for check in summary.layer_freshness] == [
+        "bronze_orders",
+        "silver_orders",
+        "silver_latest_order_state",
+        "gold_customer_order_metrics",
+        "gold_daily_region_sales",
+    ]
+    assert all(check.status == "healthy" for check in summary.layer_freshness)
+    assert summary.layer_freshness[0].lag_minutes == 0
+    assert summary.layer_freshness[-1].lag_days == 0
 
 
 def test_cli_validate_does_not_rebuild_existing_artifacts() -> None:
@@ -43,6 +53,7 @@ def test_cli_validate_does_not_rebuild_existing_artifacts() -> None:
 
     assert completed.returncode == 0
     assert artifacts.gold_daily_region_sales.stat().st_mtime_ns == original_mtime
+    assert '"layer_freshness"' in completed.stdout
 
 
 def test_schema_compatibility_allows_additive_columns(tmp_path: Path) -> None:

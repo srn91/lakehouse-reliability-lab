@@ -30,6 +30,10 @@ def test_web_surface_exposes_read_only_status_and_summary() -> None:
             "orders_batch_2.csv": [],
         }
         assert payload["validation"]["delivered_revenue_from_silver"] == "604.75"
+        assert payload["validation"]["layer_freshness"][0]["layer"] == "bronze_orders"
+        assert payload["validation"]["layer_freshness"][0]["lag_minutes"] == 0
+        assert payload["validation"]["layer_freshness"][-1]["layer"] == "gold_daily_region_sales"
+        assert payload["validation"]["layer_freshness"][-1]["lag_days"] == 0
 
         root = client.get("/")
         assert root.status_code == 200

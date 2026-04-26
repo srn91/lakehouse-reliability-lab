@@ -1,12 +1,26 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from decimal import Decimal
+from datetime import date, datetime
 
 import duckdb
 
+from app.config import PIPELINE_FRESHNESS_SLA_DAYS, PIPELINE_FRESHNESS_SLA_MINUTES
 from app.pipeline import BuildArtifacts
 from app.schema import assert_raw_schema_compatibility
+
+
+@dataclass(frozen=True)
+class LayerFreshnessStatus:
+    layer: str
+    source_timestamp: str
+    layer_timestamp: str
+    lag_minutes: int | None
+    lag_days: int | None
+    sla_minutes: int | None
+    sla_days: int | None
+    status: str
 
 
 @dataclass(frozen=True)
@@ -23,6 +37,50 @@ class ValidationSummary:
     delivered_revenue_from_gold_customer: Decimal
     delivered_orders_from_latest_state: int
     delivered_orders_from_gold_customer: int
+    layer_freshness: list[LayerFreshnessStatus]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_files_checked": self.schema_files_checked,
+            "schema_additive_columns": self.schema_additive_columns,
+            "bronze_rows": self.bronze_rows,
+            "silver_rows": self.silver_rows,
+            "duplicate_event_ids": self.duplicate_event_ids,
+            "latest_state_rows": self.latest_state_rows,
+            "gold_customer_metric_rows": self.gold_customer_metric_rows,
+            "delivered_revenue_from_silver": str(self.delivered_revenue_from_silver),
+            "delivered_revenue_from_gold_daily": str(self.delivered_revenue_from_gold_daily),
+            "delivered_revenue_from_gold_customer": str(self.delivered_revenue_from_gold_customer),
+            "delivered_orders_from_latest_state": self.delivered_orders_from_latest_state,
+            "delivered_orders_from_gold_customer": self.delivered_orders_from_gold_customer,
+            "layer_freshness": [asdict(item) for item in self.layer_freshness],
+        }
+
+
+def _iso_timestamp(value: datetime | None) -> str:
+    if value is None:
+        return ""
+    return value.isoformat(sep=" ")
+
+
+def _iso_date(value: date | None) -> str:
+    if value is None:
+        return ""
+    return value.isoformat()
+
+
+def _freshness_status(
+    *,
+    lag_minutes: int | None,
+    lag_days: int | None,
+    sla_minutes: int | None,
+    sla_days: int | None,
+) -> str:
+    if lag_minutes is not None and sla_minutes is not None:
+        return "healthy" if lag_minutes <= sla_minutes else "breach"
+    if lag_days is not None and sla_days is not None:
+        return "healthy" if lag_days <= sla_days else "breach"
+    return "unknown"
 
 
 def validate_artifacts(artifacts: BuildArtifacts) -> ValidationSummary:
@@ -119,6 +177,30 @@ def validate_artifacts(artifacts: BuildArtifacts) -> ValidationSummary:
         distinct_customers_from_latest_state = connection.execute(
             "select count(distinct customer_id) from silver_latest_order_state"
         ).fetchone()[0]
+        source_max_ingestion_ts = connection.execute(
+            "select max(ingestion_ts) from bronze_orders"
+        ).fetchone()[0]
+        source_max_event_ts = connection.execute(
+            "select max(event_ts) from silver_latest_order_state"
+        ).fetchone()[0]
+        source_max_event_date = connection.execute(
+            "select max(event_date) from silver_latest_order_state"
+        ).fetchone()[0]
+        bronze_max_ingestion_ts = connection.execute(
+            "select max(ingestion_ts) from bronze_orders"
+        ).fetchone()[0]
+        silver_max_ingestion_ts = connection.execute(
+            "select max(ingestion_ts) from silver_orders"
+        ).fetchone()[0]
+        latest_state_max_ingestion_ts = connection.execute(
+            "select max(ingestion_ts) from silver_latest_order_state"
+        ).fetchone()[0]
+        customer_metrics_max_event_ts = connection.execute(
+            "select max(latest_order_event_ts) from gold_customer_order_metrics"
+        ).fetchone()[0]
+        gold_daily_max_event_date = connection.execute(
+            "select max(event_date) from gold_daily_region_sales"
+        ).fetchone()[0]
     finally:
         connection.close()
 
@@ -139,6 +221,107 @@ def validate_artifacts(artifacts: BuildArtifacts) -> ValidationSummary:
     if delivered_orders_from_latest_state != delivered_orders_from_gold_customer:
         raise ValueError("customer gold delivered order counts do not reconcile")
 
+    bronze_lag_minutes = int(
+        (source_max_ingestion_ts - bronze_max_ingestion_ts).total_seconds() // 60
+    )
+    silver_lag_minutes = int(
+        (source_max_ingestion_ts - silver_max_ingestion_ts).total_seconds() // 60
+    )
+    latest_state_lag_minutes = int(
+        (source_max_ingestion_ts - latest_state_max_ingestion_ts).total_seconds() // 60
+    )
+    customer_metrics_lag_minutes = int(
+        (source_max_event_ts - customer_metrics_max_event_ts).total_seconds() // 60
+    )
+    gold_daily_lag_days = (source_max_event_date - gold_daily_max_event_date).days
+
+    freshness_checks = [
+        LayerFreshnessStatus(
+            layer="bronze_orders",
+            source_timestamp=_iso_timestamp(source_max_ingestion_ts),
+            layer_timestamp=_iso_timestamp(bronze_max_ingestion_ts),
+            lag_minutes=bronze_lag_minutes,
+            lag_days=None,
+            sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["bronze_orders"],
+            sla_days=None,
+            status=_freshness_status(
+                lag_minutes=bronze_lag_minutes,
+                lag_days=None,
+                sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["bronze_orders"],
+                sla_days=None,
+            ),
+        ),
+        LayerFreshnessStatus(
+            layer="silver_orders",
+            source_timestamp=_iso_timestamp(source_max_ingestion_ts),
+            layer_timestamp=_iso_timestamp(silver_max_ingestion_ts),
+            lag_minutes=silver_lag_minutes,
+            lag_days=None,
+            sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["silver_orders"],
+            sla_days=None,
+            status=_freshness_status(
+                lag_minutes=silver_lag_minutes,
+                lag_days=None,
+                sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["silver_orders"],
+                sla_days=None,
+            ),
+        ),
+        LayerFreshnessStatus(
+            layer="silver_latest_order_state",
+            source_timestamp=_iso_timestamp(source_max_ingestion_ts),
+            layer_timestamp=_iso_timestamp(latest_state_max_ingestion_ts),
+            lag_minutes=latest_state_lag_minutes,
+            lag_days=None,
+            sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["silver_latest_order_state"],
+            sla_days=None,
+            status=_freshness_status(
+                lag_minutes=latest_state_lag_minutes,
+                lag_days=None,
+                sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["silver_latest_order_state"],
+                sla_days=None,
+            ),
+        ),
+        LayerFreshnessStatus(
+            layer="gold_customer_order_metrics",
+            source_timestamp=_iso_timestamp(source_max_event_ts),
+            layer_timestamp=_iso_timestamp(customer_metrics_max_event_ts),
+            lag_minutes=customer_metrics_lag_minutes,
+            lag_days=None,
+            sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["gold_customer_order_metrics"],
+            sla_days=None,
+            status=_freshness_status(
+                lag_minutes=customer_metrics_lag_minutes,
+                lag_days=None,
+                sla_minutes=PIPELINE_FRESHNESS_SLA_MINUTES["gold_customer_order_metrics"],
+                sla_days=None,
+            ),
+        ),
+        LayerFreshnessStatus(
+            layer="gold_daily_region_sales",
+            source_timestamp=_iso_date(source_max_event_date),
+            layer_timestamp=_iso_date(gold_daily_max_event_date),
+            lag_minutes=None,
+            lag_days=gold_daily_lag_days,
+            sla_minutes=None,
+            sla_days=PIPELINE_FRESHNESS_SLA_DAYS["gold_daily_region_sales"],
+            status=_freshness_status(
+                lag_minutes=None,
+                lag_days=gold_daily_lag_days,
+                sla_minutes=None,
+                sla_days=PIPELINE_FRESHNESS_SLA_DAYS["gold_daily_region_sales"],
+            ),
+        ),
+    ]
+    freshness_failures = [
+        check.layer
+        for check in freshness_checks
+        if check.status == "breach"
+    ]
+    if freshness_failures:
+        raise ValueError(
+            "freshness SLA violated for layers: " + ", ".join(sorted(freshness_failures))
+        )
+
     return ValidationSummary(
         schema_files_checked=schema_summary.files_checked,
         schema_additive_columns=schema_summary.additive_columns,
@@ -152,4 +335,5 @@ def validate_artifacts(artifacts: BuildArtifacts) -> ValidationSummary:
         delivered_revenue_from_gold_customer=delivered_revenue_from_gold_customer,
         delivered_orders_from_latest_state=delivered_orders_from_latest_state,
         delivered_orders_from_gold_customer=delivered_orders_from_gold_customer,
+        layer_freshness=freshness_checks,
     )

@@ -10,20 +10,7 @@ from app.validation import validate_artifacts
 
 
 def _validation_payload(summary) -> dict[str, Any]:
-    return {
-        "schema_files_checked": summary.schema_files_checked,
-        "schema_additive_columns": summary.schema_additive_columns,
-        "bronze_rows": summary.bronze_rows,
-        "silver_rows": summary.silver_rows,
-        "duplicate_event_ids": summary.duplicate_event_ids,
-        "latest_state_rows": summary.latest_state_rows,
-        "gold_customer_metric_rows": summary.gold_customer_metric_rows,
-        "delivered_revenue_from_silver": str(summary.delivered_revenue_from_silver),
-        "delivered_revenue_from_gold_daily": str(summary.delivered_revenue_from_gold_daily),
-        "delivered_revenue_from_gold_customer": str(summary.delivered_revenue_from_gold_customer),
-        "delivered_orders_from_latest_state": summary.delivered_orders_from_latest_state,
-        "delivered_orders_from_gold_customer": summary.delivered_orders_from_gold_customer,
-    }
+    return summary.to_dict()
 
 
 def _build_runtime_snapshot() -> dict[str, Any]:
