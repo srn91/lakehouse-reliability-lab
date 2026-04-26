@@ -1,0 +1,132 @@
+# lakehouse-reliability-lab
+
+A production-style local lakehouse pipeline that lands raw order events into bronze, standardizes and deduplicates them into silver, publishes warehouse-friendly gold tables, and validates that the curated layer still reconciles with the raw business signal.
+
+## Problem
+
+Many data engineering demos stop at “the transform ran.” Real lakehouse work is harder: late-arriving events, duplicate deliveries, trustworthy medallion layers, and clear reconciliation between curated tables and the business truth. This repo focuses on that reliability story instead of just moving rows around.
+
+## Architecture
+
+The V1 implementation is deliberately local-first and transparent:
+
+- raw CSV batches simulate incremental event deliveries
+- bronze preserves raw ingestion history
+- silver deduplicates by `event_id`, standardizes types, and produces the latest known state per order
+- gold publishes consumption-ready revenue and customer metrics tables
+- validation checks row integrity, duplicate removal, and revenue reconciliation across layers
+
+```mermaid
+flowchart LR
+    A["data/raw/*.csv"] --> B["Bronze loader"]
+    B --> C["bronze_orders.parquet"]
+    C --> D["Silver standardization + dedupe"]
+    D --> E["silver_orders.parquet"]
+    E --> F["Latest order state projection"]
+    F --> G["Gold aggregates"]
+    G --> H["gold_daily_region_sales.parquet"]
+    G --> I["gold_customer_order_metrics.parquet"]
+    F --> J["Validation runner"]
+    H --> J
+    J --> K["reconciliation summary"]
+```
+
+## Tradeoffs
+
+This V1 makes three deliberate tradeoffs:
+
+1. DuckDB is used instead of Spark so the full medallion flow stays runnable on a laptop without cluster setup.
+2. The source system is one order-event domain, not a sprawling enterprise schema. The goal is to prove layer reliability and reconciliation discipline first.
+3. Transform logic lives in Python plus SQL rather than dbt to keep the repo self-contained and easy to run in interviews.
+
+## Repo Layout
+
+```text
+lakehouse-reliability-lab/
+├── app/
+│   ├── cli.py
+│   ├── config.py
+│   ├── pipeline.py
+│   └── validation.py
+├── data/
+│   └── raw/
+├── tests/
+└── warehouse/
+```
+
+## Run Steps
+
+### Install Dependencies
+
+```bash
+cd /Users/sathwikraonadipelli/Desktop/RESUMES/projects/lakehouse-reliability-lab
+python3 -m pip install -r requirements.txt
+```
+
+### Build the Medallion Layers
+
+```bash
+make build
+```
+
+That command creates:
+
+- `warehouse/bronze/bronze_orders.parquet`
+- `warehouse/silver/silver_orders.parquet`
+- `warehouse/silver/silver_latest_order_state.parquet`
+- `warehouse/gold/gold_daily_region_sales.parquet`
+- `warehouse/gold/gold_customer_order_metrics.parquet`
+
+### Run Validation
+
+```bash
+make validate
+```
+
+### Run the Full Quality Gate
+
+```bash
+make verify
+```
+
+## Validation
+
+The repo currently verifies three reliability properties:
+
+- duplicate raw deliveries collapse cleanly in silver
+- each order has one latest-state record after reconciliation
+- gold delivered revenue matches the delivered revenue from silver latest-state records
+
+Current expected validation snapshot:
+
+- bronze rows: `11`
+- silver rows after dedupe: `10`
+- latest order states: `6`
+- delivered revenue reconciliation: `604.75`
+
+Local quality gates:
+
+- `make lint`
+- `make test`
+- `make validate`
+- `make verify`
+
+## Current Capabilities
+
+The V1 repo demonstrates:
+
+- medallion-style bronze, silver, and gold data layout
+- late-arriving event handling through event-time vs ingestion-time ordering
+- duplicate event removal in the silver layer
+- warehouse-friendly gold aggregates for daily regional sales and customer metrics
+- deterministic validation of business reconciliation between curated outputs and source truth
+
+## Next Steps
+
+Realistic next follow-ups for the next milestone:
+
+1. add schema evolution tests and explicit compatibility checks
+2. partition outputs by event date for larger backfill scenarios
+3. migrate transform steps into dbt or Spark for a larger-scale execution story
+4. add freshness and SLA monitoring for each layer
+5. extend the sample domain to returns, refunds, and slowly changing customer attributes

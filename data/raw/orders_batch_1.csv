@@ -1,0 +1,8 @@
+event_id,order_id,customer_id,region,status,order_amount,event_ts,ingestion_ts
+evt-1001,ord-001,cust-001,east,created,120.50,2026-04-20 09:00:00,2026-04-20 09:05:00
+evt-1002,ord-001,cust-001,east,delivered,120.50,2026-04-20 14:30:00,2026-04-20 14:32:00
+evt-1003,ord-002,cust-002,west,created,89.00,2026-04-20 10:10:00,2026-04-20 10:11:00
+evt-1004,ord-003,cust-003,central,created,140.25,2026-04-21 08:00:00,2026-04-21 08:02:00
+evt-1005,ord-004,cust-004,east,created,65.75,2026-04-21 12:00:00,2026-04-21 12:01:00
+evt-1005,ord-004,cust-004,east,created,65.75,2026-04-21 12:00:00,2026-04-21 12:05:00
+

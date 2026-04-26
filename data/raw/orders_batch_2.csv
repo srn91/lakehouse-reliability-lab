@@ -1,0 +1,7 @@
+event_id,order_id,customer_id,region,status,order_amount,event_ts,ingestion_ts
+evt-1006,ord-002,cust-002,west,delivered,89.00,2026-04-20 16:45:00,2026-04-22 09:15:00
+evt-1007,ord-003,cust-003,central,delivered,140.25,2026-04-21 17:10:00,2026-04-21 17:15:00
+evt-1008,ord-004,cust-004,east,cancelled,65.75,2026-04-21 13:10:00,2026-04-21 13:12:00
+evt-1009,ord-005,cust-001,east,delivered,210.00,2026-04-22 11:00:00,2026-04-22 11:03:00
+evt-1010,ord-006,cust-005,west,delivered,45.00,2026-04-22 18:20:00,2026-04-22 18:21:00
+
