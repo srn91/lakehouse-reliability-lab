@@ -8,7 +8,7 @@ A project is not complete until every required item below is checked.
 
 - Project name: lakehouse-reliability-lab
 - Last reviewed: 2026-04-26
-- Current stage: local V1 complete, first publish pending
+- Current stage: public V1 published to GitHub, verification refreshed, remote push confirmed
 
 ## Scope
 
@@ -36,17 +36,17 @@ A project is not complete until every required item below is checked.
 ## Publish Readiness
 
 - [x] No secrets, tokens, or private notes are committed
-- [ ] Git history is meaningful and natural
-- [ ] Repo can be initialized or updated cleanly through the publish script
+- [x] Git history is meaningful and natural
+- [x] Repo can be initialized or updated cleanly through the publish script
 - [x] Tracker files are ready to be updated with the current status
 
 ## Post-Publish
 
-- [ ] Remote push was verified
-- [ ] Queue and portfolio status trackers were updated
-- [ ] Private prep notes were refreshed from the actual shipped project files
-- [ ] Final repo review was done from an outsider's perspective
+- [x] Remote push was verified
+- [x] Queue and portfolio status trackers were updated
+- [x] Private prep notes were refreshed from the actual shipped project files
+- [x] Final repo review was done from an outsider's perspective
 
 ## Completion Rule
 
-- [ ] This repo is genuinely complete enough to move to the next project
+- [x] This repo is genuinely complete enough to move to the next project
