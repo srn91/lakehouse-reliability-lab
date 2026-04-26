@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: lakehouse-reliability-lab
+    env: python
+    buildCommand: python3 -m pip install -r requirements.txt
+    startCommand: make serve
+    healthCheckPath: /health

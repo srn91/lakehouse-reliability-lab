@@ -60,10 +60,12 @@ lakehouse-reliability-lab/
 │   ├── cli.py
 │   ├── config.py
 │   ├── pipeline.py
-│   └── validation.py
+│   ├── validation.py
+│   └── web.py
 ├── data/
 │   └── raw/
 ├── tests/
+├── render.yaml
 └── warehouse/
 ```
 
@@ -106,6 +108,33 @@ make verify
 ```
 
 `make verify` is the most portable one-command gate in the repo. It keeps the build, validation, lint, and tests aligned with the shipped project state.
+
+## Serve
+
+The repo also exposes a small read-only FastAPI surface for local checks and Render deployment.
+
+```bash
+make serve
+```
+
+The service exposes:
+
+- `GET /health` for readiness
+- `GET /summary` for the current build and validation snapshot
+- `GET /` as a small entrypoint that points to the API docs
+- `GET /docs` and `GET /openapi.json` from FastAPI
+
+The web app materializes the warehouse into the container on startup so the summary is useful in a hosted environment. The HTTP surface itself stays read-only.
+
+## Render Deployment
+
+This repo includes a minimal [`render.yaml`](./render.yaml) for a Render web service.
+
+- Build command: `python3 -m pip install -r requirements.txt`
+- Start command: `make serve`
+- Health check path: `/health`
+
+After deploy, open `/docs` and `/summary` to verify the service and inspect the pipeline snapshot.
 
 ## Validation
 
