@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: bronze_orders
+    columns:
+      - name: event_id
+        tests: [not_null]
+      - name: order_id
+        tests: [not_null]
+  - name: silver_orders
+    columns:
+      - name: event_id
+        tests: [not_null, unique]
+  - name: silver_latest_order_state
+    columns:
+      - name: order_id
+        tests: [not_null, unique]
+  - name: gold_daily_region_sales
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: region
+        tests: [not_null]
+  - name: gold_customer_order_metrics
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]

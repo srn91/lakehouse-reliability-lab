@@ -1,0 +1,22 @@
+name: lakehouse_reliability_lab
+version: "1.0.0"
+config-version: 2
+
+profile: lakehouse_reliability_lab
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  lakehouse_reliability_lab:
+    bronze:
+      +materialized: table
+    silver:
+      +materialized: table
+    gold:
+      +materialized: table

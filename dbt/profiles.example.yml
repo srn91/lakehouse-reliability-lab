@@ -1,0 +1,7 @@
+lakehouse_reliability_lab:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../warehouse/lakehouse.duckdb
+      threads: 4

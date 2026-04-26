@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw landed order events from the upstream source batches.
+    tables:
+      - name: order_events
+        description: Bronze-aligned order events before silver dedupe.
+        columns:
+          - name: event_id
+            tests: [not_null]
+          - name: order_id
+            tests: [not_null]
+          - name: customer_id
+            tests: [not_null]

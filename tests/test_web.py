@@ -34,6 +34,12 @@ def test_web_surface_exposes_read_only_status_and_summary() -> None:
         assert payload["validation"]["layer_freshness"][0]["lag_minutes"] == 0
         assert payload["validation"]["layer_freshness"][-1]["layer"] == "gold_daily_region_sales"
         assert payload["validation"]["layer_freshness"][-1]["lag_days"] == 0
+        assert payload["scaleout"]["spark_entrypoint"] == "spark_job/lakehouse_job.py"
+        assert payload["scaleout"]["dbt_project_name"] == "lakehouse_reliability_lab"
+        assert payload["scaleout"]["deployment_targets"] == [
+            "spark_medallion_build",
+            "dbt_transform_validation",
+        ]
 
         root = client.get("/")
         assert root.status_code == 200

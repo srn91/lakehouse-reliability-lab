@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request, status
 
 from app.pipeline import build_all, expected_artifacts, summarize_artifacts
+from app.scaleout import validate_scaleout_assets
 from app.validation import validate_artifacts
 
 
@@ -19,6 +20,7 @@ def _build_runtime_snapshot() -> dict[str, Any]:
     try:
         built = build_all()
         validation = validate_artifacts(built)
+        scaleout = validate_scaleout_assets()
     except Exception as exc:  # pragma: no cover - surfaced through HTTP responses
         return {
             "service": "lakehouse-reliability-lab",
@@ -26,9 +28,11 @@ def _build_runtime_snapshot() -> dict[str, Any]:
             "error": str(exc),
             "artifacts": summarize_artifacts(expected),
             "validation": None,
+            "scaleout": None,
             "commands": {
                 "build": "make build",
                 "validate": "make validate",
+                "scaleout": "make scaleout",
                 "verify": "make verify",
                 "serve": "make serve",
             },
@@ -44,9 +48,11 @@ def _build_runtime_snapshot() -> dict[str, Any]:
         "status": "ready",
         "artifacts": summarize_artifacts(built),
         "validation": _validation_payload(validation),
+        "scaleout": scaleout.to_dict(),
         "commands": {
             "build": "make build",
             "validate": "make validate",
+            "scaleout": "make scaleout",
             "verify": "make verify",
             "serve": "make serve",
         },

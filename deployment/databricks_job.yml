@@ -1,0 +1,32 @@
+bundle:
+  name: lakehouse_reliability_lab
+
+resources:
+  jobs:
+    lakehouse_reliability_lab:
+      name: lakehouse-reliability-lab
+      tasks:
+        - task_key: spark_medallion_build
+          spark_python_task:
+            python_file: ../spark_job/lakehouse_job.py
+            parameters:
+              - --input-glob
+              - dbfs:/lakehouse-reliability-lab/raw/*.csv
+              - --output-root
+              - dbfs:/lakehouse-reliability-lab/warehouse
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
+        - task_key: dbt_transform_validation
+          depends_on:
+            - task_key: spark_medallion_build
+          dbt_task:
+            project_directory: ../dbt
+            commands:
+              - dbt deps
+              - dbt build --select bronze_orders silver_orders silver_latest_order_state gold_daily_region_sales gold_customer_order_metrics
+          new_cluster:
+            spark_version: 14.3.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
