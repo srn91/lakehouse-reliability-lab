@@ -23,6 +23,8 @@ def main() -> None:
         json.dumps(
             {
                 "validation": {
+                    "schema_files_checked": validation.schema_files_checked,
+                    "schema_additive_columns": validation.schema_additive_columns,
                     "bronze_rows": validation.bronze_rows,
                     "silver_rows": validation.silver_rows,
                     "duplicate_event_ids": validation.duplicate_event_ids,

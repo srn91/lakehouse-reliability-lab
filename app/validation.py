@@ -6,10 +6,13 @@ from decimal import Decimal
 import duckdb
 
 from app.pipeline import BuildArtifacts
+from app.schema import assert_raw_schema_compatibility
 
 
 @dataclass(frozen=True)
 class ValidationSummary:
+    schema_files_checked: int
+    schema_additive_columns: dict[str, list[str]]
     bronze_rows: int
     silver_rows: int
     duplicate_event_ids: int
@@ -23,6 +26,7 @@ class ValidationSummary:
 
 
 def validate_artifacts(artifacts: BuildArtifacts) -> ValidationSummary:
+    schema_summary = assert_raw_schema_compatibility()
     missing_artifacts = [
         str(path)
         for path in (
@@ -136,6 +140,8 @@ def validate_artifacts(artifacts: BuildArtifacts) -> ValidationSummary:
         raise ValueError("customer gold delivered order counts do not reconcile")
 
     return ValidationSummary(
+        schema_files_checked=schema_summary.files_checked,
+        schema_additive_columns=schema_summary.additive_columns,
         bronze_rows=bronze_rows,
         silver_rows=silver_rows,
         duplicate_event_ids=duplicate_event_ids,

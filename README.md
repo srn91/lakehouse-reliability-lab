@@ -25,6 +25,7 @@ The V1 implementation is deliberately local-first and transparent:
 
 - raw CSV batches simulate incremental event deliveries
 - bronze preserves raw ingestion history
+- a schema contract check blocks missing or incompatible upstream columns before the bronze load runs
 - silver deduplicates by `event_id`, standardizes types, and produces the latest known state per order
 - gold publishes consumption-ready revenue and customer metrics tables
 - validation checks row integrity, duplicate removal, and reconciliation across both gold outputs
@@ -148,6 +149,7 @@ After deploy, open `/docs` and `/summary` to verify the service and inspect the 
 
 The repo currently verifies three reliability properties:
 
+- every raw batch satisfies the expected schema contract, while additive columns are tracked explicitly
 - duplicate raw deliveries collapse cleanly in silver
 - each order has one latest-state record after reconciliation
 - daily-region gold revenue matches the delivered revenue from silver latest-state records
@@ -155,6 +157,8 @@ The repo currently verifies three reliability properties:
 
 Current expected validation snapshot:
 
+- schema files checked: `2`
+- additive raw columns allowed: `none`
 - bronze rows: `11`
 - silver rows after dedupe: `10`
 - latest order states: `6`
@@ -173,6 +177,7 @@ Local quality gates:
 The V1 repo demonstrates:
 
 - medallion-style bronze, silver, and gold data layout
+- raw schema compatibility enforcement before warehouse materialization
 - late-arriving event handling through event-time vs ingestion-time ordering
 - duplicate event removal in the silver layer
 - warehouse-friendly gold aggregates for daily regional sales and customer metrics
@@ -183,7 +188,7 @@ The V1 repo demonstrates:
 
 Realistic next follow-ups for the next milestone:
 
-1. add schema evolution tests and explicit compatibility checks
+1. add schema drift incident reporting and compatibility diffs for upstream owners
 2. partition outputs by event date for larger backfill scenarios
 3. migrate transform steps into dbt or Spark for a larger-scale execution story
 4. add freshness and SLA monitoring for each layer

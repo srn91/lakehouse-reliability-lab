@@ -6,6 +6,7 @@ from pathlib import Path
 import duckdb
 
 from app.config import BRONZE_DIR, GOLD_DIR, RAW_DIR, SILVER_DIR
+from app.schema import assert_raw_schema_compatibility
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ def expected_artifacts() -> BuildArtifacts:
 
 def build_all() -> BuildArtifacts:
     _ensure_directories()
+    assert_raw_schema_compatibility()
     artifacts = expected_artifacts()
     connection = duckdb.connect(database=":memory:")
     try:

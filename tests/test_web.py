@@ -24,6 +24,11 @@ def test_web_surface_exposes_read_only_status_and_summary() -> None:
             "warehouse/bronze/bronze_orders.parquet"
         )
         assert payload["validation"]["bronze_rows"] == 11
+        assert payload["validation"]["schema_files_checked"] == 2
+        assert payload["validation"]["schema_additive_columns"] == {
+            "orders_batch_1.csv": [],
+            "orders_batch_2.csv": [],
+        }
         assert payload["validation"]["delivered_revenue_from_silver"] == "604.75"
 
         root = client.get("/")
