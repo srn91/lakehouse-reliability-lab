@@ -51,7 +51,7 @@ This V1 makes three deliberate tradeoffs:
 
 1. DuckDB is used instead of Spark so the full medallion flow stays runnable on a laptop without cluster setup.
 2. The source system is one order-event domain, not a sprawling enterprise schema. The goal is to prove layer reliability and reconciliation discipline first.
-3. Transform logic lives in Python plus SQL rather than dbt to keep the repo self-contained and easy to run in interviews.
+3. Transform logic lives in Python plus SQL rather than dbt to keep the repo self-contained and easy to run on a laptop.
 
 ## Repo Layout
 
@@ -184,9 +184,9 @@ The V1 repo demonstrates:
 - deterministic validation of business reconciliation between curated outputs and source truth
 - fixed-point money handling so financial rollups stay exact end to end
 
-## Next Steps
+## Future Expansion
 
-Realistic next follow-ups for the next milestone:
+Possible follow-on work outside the current shipped scope:
 
 1. add schema drift incident reporting and compatibility diffs for upstream owners
 2. partition outputs by event date for larger backfill scenarios
