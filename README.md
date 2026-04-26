@@ -61,7 +61,7 @@ lakehouse-reliability-lab/
 ### Install Dependencies
 
 ```bash
-git clone git@github.com:srn91/lakehouse-reliability-lab.git
+git clone https://github.com/srn91/lakehouse-reliability-lab.git
 cd lakehouse-reliability-lab
 python3 -m pip install -r requirements.txt
 ```
