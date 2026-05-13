@@ -2,6 +2,23 @@
 
 A production-style lakehouse pipeline that lands raw order events into bronze, standardizes and deduplicates them into silver, publishes warehouse-friendly gold tables, validates that the curated layer still reconciles with the raw business signal, and includes a shipped Spark/dbt scale-out lane for warehouse execution.
 
+
+## Proof Snapshot
+
+| Signal | Current evidence |
+|---|---|
+| Medallion flow | Raw order events land in bronze, dedupe into silver, and publish gold revenue and customer metrics. |
+| Validation scale | Current validation checks `2` schema files, `11` bronze rows, `10` silver rows after dedupe, `6` latest order states, and `5` customer metric rows. |
+| Reconciliation | Delivered revenue reconciles across both gold outputs at `604.75`. |
+| Freshness/SLA | Bronze, silver, and gold outputs report `0` lag against their shipped SLA thresholds. |
+| Scale-out assets | Repo includes DuckDB default path plus Spark job, dbt project, and Databricks-style deployment manifest. |
+
+## What This Proves
+
+- The repo shows reliability work beyond transforms: schema checks, dedupe, latest-state projection, reconciliation, freshness, and SLA propagation.
+- The same medallion contract is represented across local DuckDB, Spark, dbt, and deployment assets.
+- The evidence maps to Data Engineer, Analytics Engineer, Lakehouse Engineer, and data platform roles.
+
 ## Problem
 
 Many data engineering demos stop at “the transform ran.” Real lakehouse work is harder: late-arriving events, duplicate deliveries, trustworthy medallion layers, and clear reconciliation between curated tables and the business truth. This repo focuses on that reliability story instead of just moving rows around.
