@@ -17,7 +17,7 @@ A production-style lakehouse pipeline that lands raw order events into bronze, s
 
 - The repo shows reliability work beyond transforms: schema checks, dedupe, latest-state projection, reconciliation, freshness, and SLA propagation.
 - The same medallion contract is represented across local DuckDB, Spark, dbt, and deployment assets.
-- The evidence maps to Data Engineer, Analytics Engineer, Lakehouse Engineer, and data platform roles.
+- The implementation combines layered data processing, validation, reconciliation, freshness checks, and API-readable quality summaries.
 
 ## Problem
 
