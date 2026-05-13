@@ -243,7 +243,7 @@ Local quality gates:
 - `make scaleout`
 - `make verify`
 
-## Current Capabilities
+## Capabilities
 
 The repo demonstrates:
 
