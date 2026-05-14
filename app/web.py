@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import HTMLResponse
 
 from app.pipeline import build_all, expected_artifacts, summarize_artifacts
 from app.scaleout import validate_scaleout_assets
@@ -88,15 +89,26 @@ def _runtime_snapshot(request: Request) -> dict[str, Any]:
     return snapshot
 
 
-@app.get("/")
-def root(request: Request) -> dict[str, str]:
-    _runtime_snapshot(request)
-    return {
-        "service": "lakehouse-reliability-lab",
-        "health": "/health",
-        "summary": "/summary",
-        "docs": "/docs",
-    }
+@app.get("/", response_class=HTMLResponse)
+def root(request: Request) -> str:
+    snapshot = _runtime_snapshot(request)
+    status_text = snapshot["status"]
+    return f"""<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lakehouse Reliability Lab</title>
+<style>body{{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:860px;margin:48px auto;padding:0 24px;line-height:1.5;color:#111}}a{{color:#0645ad}}</style></head>
+<body>
+<h1>Lakehouse Reliability Lab</h1>
+<p>Read-only reliability surface for a medallion pipeline with deduplication, late-arrival handling, reconciliation, and validation checks.</p>
+<ul><li>Status: {status_text}</li></ul>
+<h2>Open endpoints</h2>
+<ul>
+<li><a href="/summary">Reliability summary</a></li>
+<li><a href="/health">Health check</a></li>
+<li><a href="/docs">API docs</a></li>
+</ul>
+</body></html>"""
 
 
 @app.get("/health")

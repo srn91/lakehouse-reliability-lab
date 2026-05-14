@@ -43,12 +43,9 @@ def test_web_surface_exposes_read_only_status_and_summary() -> None:
 
         root = client.get("/")
         assert root.status_code == 200
-        assert root.json() == {
-            "service": "lakehouse-reliability-lab",
-            "health": "/health",
-            "summary": "/summary",
-            "docs": "/docs",
-        }
+        assert "text/html" in root.headers["content-type"]
+        assert "Lakehouse Reliability Lab" in root.text
+        assert "/summary" in root.text
 
         docs = client.get("/docs")
         assert docs.status_code == 200
