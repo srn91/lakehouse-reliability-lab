@@ -201,7 +201,8 @@ The hosted `/summary` endpoint includes a `scaleout` block so the shipped Spark/
 
 ## Hosted Deployment
 
-- Live API: [`/summary`](https://lakehouse-reliability-lab.onrender.com/summary)
+- Live demo: [lakehouse-reliability-lab.onrender.com](https://lakehouse-reliability-lab.onrender.com)
+- Sample API: [`/summary`](https://lakehouse-reliability-lab.onrender.com/summary)
 - Browser smoke: Render-hosted `/summary` loaded in a real browser and returned the expected artifact + reconciliation snapshot.
 - Render service config: Python web service on `main`, auto-deploy on commit, region `oregon`, plan `free`, build `python3 -m pip install -r requirements.txt`, start `make serve`, health check `/health`.
 - Render deploy command: `render deploys create srv-d7n6593bc2fs738kjhjg --confirm`
